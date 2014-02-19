@@ -32,7 +32,6 @@
 @interface ActionSheetDatePicker()
 @property (nonatomic, assign) UIDatePickerMode datePickerMode;
 @property (nonatomic, strong) NSDate *selectedDate;
-@property (nonatomic, retain) NSTimeZone *timeZone;
 @end
 
 @implementation ActionSheetDatePicker
@@ -96,10 +95,6 @@
     UIDatePicker *picker = (UIDatePicker *)self.pickerView;    
     [picker setDate:itemValue animated:YES];
     [self eventForDatePicker:picker];
-}
-
-- (void)setTimeZone:(NSTimeZone*)timeZone {
-    self.timeZone = timeZone;
 }
 
 @end

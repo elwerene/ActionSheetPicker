@@ -35,6 +35,6 @@
 
 - (void)eventForDatePicker:(id)sender;
 
-- (void)setTimeZone:(NSTimeZone*)timeZone;
+@property (nonatomic, retain) NSTimeZone* timeZone;
 
 @end
