@@ -29,6 +29,7 @@
 
 
 @interface AbstractActionSheetPicker : NSObject
+@property (nonatomic, strong) UIToolbar* toolbar;
 @property (nonatomic, copy) NSString *title;
 @property (nonatomic, strong) UIView *pickerView;
 @property (nonatomic, readonly) CGSize viewSize;
@@ -56,5 +57,11 @@
 
     //For subclasses. This responds to a custom button being pressed.
 - (IBAction)customButtonPressed:(id)sender;
+
+    // Allow the user to specify a custom cancel button
+- (void) setCancelButton: (UIBarButtonItem *)button;
+
+    // Allow the user to specify a custom done button
+- (void) setDoneButton: (UIBarButtonItem *)button;
 
 @end

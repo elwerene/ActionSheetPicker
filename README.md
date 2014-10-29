@@ -1,36 +1,12 @@
-# ActionSheetPicker = UIPickerView + UIActionSheet #
+## This version is deprecated: use [**ActionSheetPicker-3.0**](https://github.com/skywinder/ActionSheetPicker-3.0) instead.
 
-Well, that's how it started. Now, the following is more accurate: 
+This repo is **outdated**. You can find new version of ActionSheetPicker (iOS 8 compatible alredy) here: [**ActionSheetPicker-3.0**](https://github.com/skywinder/ActionSheetPicker-3.0).
 
- * _**iPhone/iPod** ActionSheetPicker = ActionSheetPicker = A Picker + UIActionSheet_
- * _**iPad** ActionSheetPicker = A Picker + UIPopoverController_
-
-
-## Overview ##
-ActionSheetPicker
-https://github.com/TimCinel/ActionSheetPicker
-
-Easily present an ActionSheet with a PickerView, allowing user to select from a number of immutible options. Based on the HTML drop-down alternative found in mobilesafari.
-
-Improvements more than welcome - they are kindly requested :)
+I try to resolve a lot of pull requests and issues in this repo by time, but new updates will be appeared in https://github.com/skywinder/ActionSheetPicker-3.0. I forked from this repo and implement a bunch of fixes.
 
 
-## Benefits ##
-
- * Spawn pickers with convenience function - delegate or reference
-   not required. Just provide a target/action callback.
- * Add buttons to UIToolbar for quick selection (see ActionSheetDatePicker below)
- * Delegate protocol available for more control
- * Universal (iPhone/iPod/iPad)
-
-
-## Screen Shots ##
-
-![ActionSheetPicker](http://i.imgur.com/TtkuG.png "ActionSheetPicker")
-![ActionSheetDatePicker](http://i.imgur.com/IFDmw.png "ActionSheetDatePicker")
-![ActionSheetDistancePicker](http://i.imgur.com/bkWvA.png "ActionSheetDistancePicker")
-![iPad Support](http://i.imgur.com/Xu4wb.png "iPad Support")
-
+*Regards,*
+*Petr Korolev.*
 
 ## Credits ##
 
@@ -51,6 +27,9 @@ Thanks to all of the contributors for making ActionSheetPicker better for the iO
 
 [Greg Combs](http://github.com/grgcombs) (Refactor!)
 
+[Petr Korolev](http://github.com/skywinder) (Update, crashfix, update for iOS7, new pickers)
+
+[Nikos Mouzakitis](http://github.com/NikDude)
 
 ### Creator ###
 

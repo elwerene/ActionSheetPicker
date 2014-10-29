@@ -27,10 +27,25 @@
 
 #import "AbstractActionSheetPicker.h"
 #import <objc/message.h>
+#import <sys/utsname.h>
+
+BOOL OSAtLeast(NSString* v) {
+    return [[[UIDevice currentDevice] systemVersion] compare:v options:NSNumericSearch] != NSOrderedAscending;
+}
+
+BOOL isIPhone4() {
+    struct utsname systemInfo;
+    uname(&systemInfo);
+    
+    NSString *modelName = [NSString stringWithCString:systemInfo.machine encoding:NSUTF8StringEncoding];
+    return ([modelName rangeOfString:@"iPhone3"].location != NSNotFound);
+}
 
 @interface AbstractActionSheetPicker()
 
 @property (nonatomic, strong) UIBarButtonItem *barButtonItem;
+@property (nonatomic, strong) UIBarButtonItem *doneBarButtonItem;
+@property (nonatomic, strong) UIBarButtonItem *cancelBarButtonItem;
 @property (nonatomic, strong) UIView *containerView;
 @property (nonatomic, unsafe_unretained) id target;
 @property (nonatomic, assign) SEL successAction;
@@ -87,6 +102,12 @@
             self.containerView = origin;
         else
             NSAssert(NO, @"Invalid origin provided to ActionSheetPicker ( %@ )", origin);
+
+        // Initialize default bar buttons so they can be overridden before the 'showActionSheetPicker' is called
+        UIBarButtonItem *cancelBtn = [self createButtonWithType:UIBarButtonSystemItemCancel target:self action:@selector(actionPickerCancel:)];
+        [self setCancelBarButtonItem:cancelBtn];
+        UIBarButtonItem *doneButton = [self createButtonWithType:UIBarButtonSystemItemDone target:self action:@selector(actionPickerDone:)];
+        [self setDoneBarButtonItem:doneButton];
         
         //allows us to use this without needing to store a reference in calling class
         self.selfReference = self;
@@ -129,9 +150,23 @@
 
 - (void)showActionSheetPicker {
     UIView *masterView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.viewSize.width, 260)];    
-    UIToolbar *pickerToolbar = [self createPickerToolbarWithTitle:self.title];
-    [pickerToolbar setBarStyle:UIBarStyleBlackTranslucent];
-    [masterView addSubview:pickerToolbar];
+    if (isIPhone4()) {
+        masterView.backgroundColor = [UIColor colorWithRed:0.97 green:0.97 blue:0.97 alpha:1.0];
+    }
+    self.toolbar = [self createPickerToolbarWithTitle:self.title];
+    [masterView addSubview: self.toolbar];
+    
+    //ios7 picker draws a darkened alpha-only region on the first and last 8 pixels horizontally, but blurs the rest of its background.  To make the whole popup appear to be edge-to-edge, we have to add blurring to the remaining left and right edges.
+    if (OSAtLeast(@"7.0")) {
+        CGRect f = CGRectMake(0,self.toolbar.frame.origin.y, 8, masterView.frame.size.height - self.toolbar.frame.origin.y);
+        UIToolbar* leftEdge = [[UIToolbar alloc] initWithFrame: f];
+        f.origin.x = masterView.frame.size.width - 8;
+        UIToolbar* rightEdge = [[UIToolbar alloc] initWithFrame: f];
+        leftEdge.barTintColor = rightEdge.barTintColor = self.toolbar.barTintColor;
+        [masterView insertSubview: leftEdge atIndex: 0];
+        [masterView insertSubview: rightEdge atIndex: 0];
+    }
+
     self.pickerView = [self configuredPickerView];
     NSAssert(_pickerView != NULL, @"Picker view failed to instantiate, perhaps you have invalid component data.");
     [masterView addSubview:_pickerView];
@@ -178,7 +213,7 @@
 - (IBAction)customButtonPressed:(id)sender {
     UIBarButtonItem *button = (UIBarButtonItem*)sender;
     NSInteger index = button.tag;
-    NSAssert((index >= 0 && index < self.customButtons.count), @"Bad custom button tag: %d, custom button count: %d", index, self.customButtons.count);
+    NSAssert((index >= 0 && index < self.customButtons.count), @"Bad custom button tag: %zd, custom button count: %zd", index, self.customButtons.count);
     NSAssert([self.pickerView respondsToSelector:@selector(selectRow:inComponent:animated:)], @"customButtonPressed not overridden, cannot interact with subclassed pickerView");
     NSDictionary *buttonDetails = [self.customButtons objectAtIndex:index];
     NSAssert(buttonDetails != NULL, @"Custom button dictionary is invalid");
@@ -187,15 +222,30 @@
     NSAssert(picker != NULL, @"PickerView is invalid");
     [picker selectRow:buttonValue inComponent:0 animated:YES];
     if ([self respondsToSelector:@selector(pickerView:didSelectRow:inComponent:)]) {
-        void (*objc_msgSendTyped)(id self, SEL _cmd, id pickerView, NSInteger row, NSInteger component) = (void*)objc_msgSend; // sending Integers as params
+        void (*objc_msgSendTyped)(id target, SEL _cmd, id pickerView, NSInteger row, NSInteger component) = (void*)objc_msgSend; // sending Integers as params
         objc_msgSendTyped(self, @selector(pickerView:didSelectRow:inComponent:), picker, buttonValue, 0);
     }
 }
 
+// Allow the user to specify a custom cancel button
+- (void) setCancelButton: (UIBarButtonItem *)button {
+    [button setTarget:self];
+    [button setAction:@selector(actionPickerCancel:)];
+    self.cancelBarButtonItem = button;
+}
+
+// Allow the user to specify a custom done button
+- (void) setDoneButton: (UIBarButtonItem *)button {
+    [button setTarget:self];
+    [button setAction:@selector(actionPickerDone:)];
+    self.doneBarButtonItem = button;
+}
+
+
 - (UIToolbar *)createPickerToolbarWithTitle:(NSString *)title  {
     CGRect frame = CGRectMake(0, 0, self.viewSize.width, 44);
     UIToolbar *pickerToolbar = [[UIToolbar alloc] initWithFrame:frame];
-    pickerToolbar.barStyle = UIBarStyleBlackOpaque;
+    pickerToolbar.barStyle = OSAtLeast(@"7.0") ? UIBarStyleDefault : UIBarStyleBlackTranslucent;
     NSMutableArray *barItems = [[NSMutableArray alloc] init];
     NSInteger index = 0;
     for (NSDictionary *buttonDetails in self.customButtons) {
@@ -207,8 +257,7 @@
         index++;
     }
     if (NO == self.hideCancel) {
-        UIBarButtonItem *cancelBtn = [self createButtonWithType:UIBarButtonSystemItemCancel target:self action:@selector(actionPickerCancel:)];
-        [barItems addObject:cancelBtn];
+        [barItems addObject:self.cancelBarButtonItem];
     }
     UIBarButtonItem *flexSpace = [self createButtonWithType:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
     [barItems addObject:flexSpace];
@@ -217,16 +266,16 @@
         [barItems addObject:labelButton];    
         [barItems addObject:flexSpace];
     }
-    UIBarButtonItem *doneButton = [self createButtonWithType:UIBarButtonSystemItemDone target:self action:@selector(actionPickerDone:)];
-    [barItems addObject:doneButton];
+    [barItems addObject:self.doneBarButtonItem];
+    
     [pickerToolbar setItems:barItems animated:YES];
     return pickerToolbar;
 }
 
 - (UIBarButtonItem *)createToolbarLabelWithTitle:(NSString *)aTitle {
     UILabel *toolBarItemlabel = [[UILabel alloc]initWithFrame:CGRectMake(0, 0, 180,30)];
-    [toolBarItemlabel setTextAlignment:UITextAlignmentCenter];    
-    [toolBarItemlabel setTextColor:[UIColor whiteColor]];    
+    [toolBarItemlabel setTextAlignment:NSTextAlignmentCenter];
+    [toolBarItemlabel setTextColor: OSAtLeast(@"7.0") ? [UIColor blackColor] : [UIColor whiteColor]];
     [toolBarItemlabel setFont:[UIFont boldSystemFontOfSize:16]];    
     [toolBarItemlabel setBackgroundColor:[UIColor clearColor]];    
     toolBarItemlabel.text = aTitle;    
@@ -235,7 +284,13 @@
 }
 
 - (UIBarButtonItem *)createButtonWithType:(UIBarButtonSystemItem)type target:(id)target action:(SEL)buttonAction {
-    return [[UIBarButtonItem alloc] initWithBarButtonSystemItem:type target:target action:buttonAction];
+
+    UIBarButtonItem *barButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:type target:target action:buttonAction];
+
+    if (NSFoundationVersionNumber > NSFoundationVersionNumber_iOS_6_1)
+        [barButton setTintColor: [[UIApplication sharedApplication] keyWindow].tintColor];
+
+    return barButton;
 }
 
 #pragma mark - Utilities and Accessors
@@ -293,7 +348,11 @@
     [_actionSheet setActionSheetStyle:UIActionSheetStyleBlackTranslucent];
     [_actionSheet addSubview:aView];
     [self presentActionSheet:_actionSheet];
+    
+    // Use beginAnimations for a smoother popup animation, otherwise the UIActionSheet pops into view
+    [UIView beginAnimations:nil context:nil];
     _actionSheet.bounds = CGRectMake(0, 0, self.viewSize.width, sheetHeight);
+    [UIView commitAnimations];    
 }
 
 - (void)presentActionSheet:(UIActionSheet *)actionSheet {

@@ -62,6 +62,12 @@
     UIDatePicker *datePicker = [[UIDatePicker alloc] initWithFrame:datePickerFrame];
     datePicker.timeZone = self.timeZone;
     datePicker.datePickerMode = self.datePickerMode;
+    datePicker.maximumDate = self.maximumDate;
+    datePicker.maximumDate = self.minimumDate;
+    datePicker.calendar = self.calendar;
+    datePicker.timeZone = self.timeZone;
+    datePicker.locale = self.locale;
+
     [datePicker setDate:self.selectedDate animated:NO];
     [datePicker addTarget:self action:@selector(eventForDatePicker:) forControlEvents:UIControlEventValueChanged];
     
@@ -73,9 +79,12 @@
 
 - (void)notifyTarget:(id)target didSucceedWithAction:(SEL)action origin:(id)origin {
     if ([target respondsToSelector:action])
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
         [target performSelector:action withObject:self.selectedDate withObject:origin];
+#pragma clang diagnostic pop
     else
-        NSAssert(NO, @"Invalid target/action ( %s / %s ) combination used for ActionSheetPicker", object_getClassName(target), (char *)action);
+        NSAssert(NO, @"Invalid target/action ( %s / %s ) combination used for ActionSheetPicker", object_getClassName(target), sel_getName(action));
 }
 
 - (void)eventForDatePicker:(id)sender {
@@ -88,7 +97,7 @@
 - (void)customButtonPressed:(id)sender {
     UIBarButtonItem *button = (UIBarButtonItem*)sender;
     NSInteger index = button.tag;
-    NSAssert((index >= 0 && index < self.customButtons.count), @"Bad custom button tag: %d, custom button count: %d", index, self.customButtons.count);    
+    NSAssert((index >= 0 && index < self.customButtons.count), @"Bad custom button tag: %zd, custom button count: %zd", index, self.customButtons.count);    
     NSAssert([self.pickerView respondsToSelector:@selector(setDate:animated:)], @"Bad pickerView for ActionSheetDatePicker, doesn't respond to setDate:animated:");
     NSDictionary *buttonDetails = [self.customButtons objectAtIndex:index];
     NSDate *itemValue = [buttonDetails objectForKey:@"buttonValue"];
